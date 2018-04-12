@@ -1,6 +1,3 @@
 numpy
-openpyxl
-xlrd
 pandas
-xlwt
 jellyfish
