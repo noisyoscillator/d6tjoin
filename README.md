@@ -42,7 +42,7 @@ Enhances `pd.merge()` function with:
 * Easier UI
 
 
-[SmartJoin Examples notebook](https://github.com/d6t/d6t-lib/blob/master/examples-smartjoin.ipynb)
+[SmartJoin Examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-smartjoin.ipynb)
 
 ## Installation
 
@@ -52,6 +52,6 @@ Update `pip install --upgrade git+https://github.com/d6t/d6tjoin.git`
 
 ## Documentation
 
-*  [SmartJoin Examples notebook](https://github.com/d6t/d6t-lib/blob/master/examples-smartjoin.ipynb) - Demonstrates SmartJoin usage
+*  [SmartJoin Examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-smartjoin.ipynb) - Demonstrates SmartJoin usage
 *  [Official docs](http://d6tjoin.readthedocs.io/en/latest/index.html) - Detailed documentation for modules, classes, functions
 *  [www.databolt.tech](https://www.databolt.tech/index-combine.html) - Web app if you don't want to code
