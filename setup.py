@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='d6tjoin',
     version='0.1.0',
-    packages=['join'],
+    packages=['d6tjoin'],
     url='https://github.com/d6t/d6tjoin',
     license='MIT',
     author='DataBolt Team',
