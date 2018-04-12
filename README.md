@@ -1,4 +1,4 @@
-# Databolt Smart Join Combine
+# Databolt Smart Join
 
 Easily join different datasets without writing custom code. Does fuzzy and time-series aware joins.
 
