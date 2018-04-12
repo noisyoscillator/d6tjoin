@@ -36,9 +36,9 @@ sj = smart_join.SmartJoin([df1, df2], [['BARRA_PIT_CUSIP','cusip'],['date','Date
 ## Features include
 Enhances `pd.merge()` function with:
 * Pre- and post-join diagnostics
-* Customize join type by join key
 * Fuzzy top1 similarity joins for strings and dates
-* Multi-frame joins
+* Multi-frame joins (coming soon)
+* Customize join type by join key (coming soon)
 * Easier UI
 
 
