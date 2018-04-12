@@ -2,8 +2,6 @@
 
 Easily join different datasets without writing custom code. Does fuzzy and time-series aware joins.
 
-![](https://www.databolt.tech/images/joiner-landing-git.png)
-
 ## Sample Use
 
 ```python
