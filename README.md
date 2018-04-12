@@ -8,12 +8,12 @@ Easily join different datasets without writing custom code. Does fuzzy and time-
 
 import pandas as pd
 
-import join.smart_join
+from d6tjoin.join import smart_join
 
 df1=pd.read_csv('data/case_factors/securities.csv',parse_dates=['date'])
 df2=pd.read_csv('data/case_factors/factors.csv',parse_dates=['Date'])
 
-sj = join.smart_join.SmartJoin([df1, df2], [['BARRA_PIT_CUSIP','cusip'],['date','Date']], mode=['top1', 'top1'], how='left', cfg_top1={'BARRA_PIT_CUSIP':{'top_records':5}})
+sj = smart_join.SmartJoin([df1, df2], [['BARRA_PIT_CUSIP','cusip'],['date','Date']], mode=['top1', 'top1'], how='left', cfg_top1={'BARRA_PIT_CUSIP':{'top_records':5}})
 
 >>> sj.stats_prejoin(do_print=False)
 
