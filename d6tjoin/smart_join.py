@@ -188,33 +188,6 @@ class SmartJoin(object):
         return df_out
 
 
-    def head_input(self, keys_only=True, nrows=3):
-        for idf,dfg in enumerate(self.dfs):
-            if keys_only:
-                print(dfg[self.keysdf[idf]].head(nrows))
-            else:
-                print(dfg.head(nrows))
-
-
-    def head_unmatched(self, side='both', level=0, nrecords=3, nrows=3, keys_only=True):
-
-        if side=='both':
-                print('unmatched for key ')
-                keys = self.keyssets_merge[level]['unmatched both'][:nrecords]
-                dfout = []
-                for idf, dfg in enumerate(self.dfs):
-                    dfg[dfg[self.keysdf[idf]]]
-                    raise NotImplementedError()
-                    # todo: show nrows for nrecords in self.keyssets_merge[level]['unmatched both'][:nrecords]
-        elif side=='left':
-            raise NotImplementedError()
-        elif side=='right':
-            raise NotImplementedError()
-        else:
-            raise ValueError('invalid side parameter')
-
-        raise NotImplementedError()
-        # todo: implement
 
 
     def run_match_top1_all(self, cfg_top1=None):
