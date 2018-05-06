@@ -50,13 +50,12 @@ def test_basejoin():
     assert j2.keysdf == [['a', 'b'], ['a', 'c']]
     assert j3.keysdf == j2.keysdf
 
-
 def test_prejoin():
     df1 = pd.DataFrame({'a': range(3), 'b': range(3)})
     df2 = pd.DataFrame({'a': range(3), 'c': range(3)})
 
     j = PreJoin([df1,df2],['a'])
-    dfr = j.stats_prejoin(return_results=True)
+    dfr = j.stats_prejoin(print_only=False)
     results = dfr.to_dict()
     check = {'all matched': {0: True, 1: True},
          'inner': {0: 3, 1: 3},
@@ -69,18 +68,25 @@ def test_prejoin():
          'unmatched right': {0: 0, 1: 0},
          'unmatched total': {0: 0, 1: 0}}
     assert results == check
+    assert j.is_all_matched()
+    assert j.is_all_matched('a')
 
     df2 = pd.DataFrame({'a': range(3,6), 'c': range(3)})
 
     j = PreJoin([df1,df2],['a'])
-    dfr = j.stats_prejoin(return_results=True)
+    dfr = j.stats_prejoin(print_only=False)
     assert (~dfr['all matched']).all()
+    assert not j.is_all_matched()
+    assert not j.is_all_matched('a')
 
     df2 = pd.DataFrame({'b': range(3,6), 'a': range(3), 'v':range(3)})
     cfg_keys = ['a', 'b']
     j = PreJoin([df1,df2],cfg_keys)
-    dfr = j.stats_prejoin(return_results=True)
+    dfr = j.stats_prejoin(print_only=False)
     assert dfr['all matched'].tolist()==[True, False, False]
+    assert not j.is_all_matched()
+    assert j.is_all_matched('a')
+    assert not j.is_all_matched('b')
 
     # test show_input
     dfr = j.show_input(1,keys_only=False)

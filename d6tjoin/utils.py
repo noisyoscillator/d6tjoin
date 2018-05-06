@@ -118,6 +118,8 @@ class PreJoin(BaseJoin):
 
     def _calc_keysets(self):
 
+        self.keysets = [] # reset
+
         # find set of unique values for each join key
         for idx, dfg in enumerate(self.dfs):
 
@@ -158,7 +160,7 @@ class PreJoin(BaseJoin):
             self.keysets.append(df_key)
 
 
-    def stats_prejoin(self, return_results=False):
+    def stats_prejoin(self, print_only=True, rerun=False):
         """
         Show prejoin statistics
 
@@ -167,7 +169,8 @@ class PreJoin(BaseJoin):
 
         """
 
-        self._calc_keysets()
+        if not self.keysets or rerun:
+            self._calc_keysets()
 
         df_out = []
 
@@ -185,10 +188,22 @@ class PreJoin(BaseJoin):
         df_out = df_out[['key left','key right','all matched','inner','left','right','outer','unmatched total','unmatched left','unmatched right']]
 
 
-        if return_results:
-            return df_out
-        else:
+        if print_only:
             print(df_out)
+        else:
+            return df_out
+
+    def is_all_matched(self, key='__all__',rerun=False):
+
+        if not self.keysets or rerun:
+            self._calc_keysets()
+
+        keymask = [key in e for e in self.keysall]
+        if not (any(keymask)):
+            raise ValueError('key ', self.cfg_show_key, ' not a join key in ', self.keys)
+        ilevel = keymask.index(True)
+
+        return (self.keysets[ilevel]['key left']==key or self.keysets[ilevel]['key right']==key) and len(self.keysets[ilevel]['unmatched total'])==0
 
     def show_input(self, nrows=3, keys_only=True, print_only=False):
         """
