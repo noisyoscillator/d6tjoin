@@ -45,6 +45,26 @@ class BaseJoin(object):
 
     def __init__(self, dfs, keys=None, keys_bydf=False):
 
+        # inputs dfs
+        self._init_dfs(dfs)
+
+        # check and save join keys
+        self._check_keys(keys)
+        keys, keysdf = self._prep_keys(keys, keys_bydf)
+        self._check_keysdfs(keys, keysdf)
+
+        # todo: no duplicate join keys passed
+
+        # join keys
+        self.cfg_njoins = len(keysdf[0])
+        self.keys = keys # keys by join level
+        self.keysall = keys+[['__all__']*len(dfs)]
+        self.keysdf = keysdf # keys by df
+        self.keysdfall = keysdf+[['__all__']]*len(dfs)
+        self.uniques = [] # set of unique values for each join key individually
+        self.keysets = [] # set of unique values for all join keys together __all__
+
+    def _init_dfs(self, dfs):
         # check and save dfs
         if len(dfs)<2:
             raise ValueError('Need to pass at least 2 dataframes')
@@ -55,35 +75,22 @@ class BaseJoin(object):
         self.dfs = dfs
         self.cfg_ndfs = len(dfs)
 
-        # todo: arg to say keys_bylevel = True else keys_bydf
-
-        # check and save join keys
+    def _check_keys(self, keys):
         if not keys or len(keys)<1:
             raise ValueError("Need to have join keys")
 
-        keys, keysdf = self._prep_keys(keys, keys_bydf)
-
-        self.cfg_njoins = len(keysdf[0])
-
-        if not all([len(k)==len(dfs) for k in keys]):
+    def _check_keysdfs(self, keys, keysdf):
+        if not all([len(k)==len(self.dfs) for k in keys]):
             raise ValueError("Need to provide join keys for all dataframes")
 
-        for idf,dfg in enumerate(dfs):
+        for idf,dfg in enumerate(self.dfs):
             dfg.head(1)[keysdf[idf]] # check that keys present in dataframe
 
-        # todo: check cfg_top1.keys correct
-        # todo: no duplicate join keys passed
-
-
-        # join keys
-        self.keys = keys # keys by join level
-        self.keysall = keys+[['__all__']*len(dfs)]
-        self.keysdf = keysdf # keys by df
-        self.keysdfall = keysdf+[['__all__']]*len(dfs)
-        self.uniques = [] # set of unique values for each join key individually
-        self.keysets = [] # set of unique values for all join keys together __all__
-
     def _prep_keys(self, keys, keys_bydf):
+        # deal with empty keys
+        if not keys:
+            return [], []
+
         # get keys in correct format given user input
         if isinstance(keys[0], (str,)):
             keysdf = [keys]*len(self.dfs)

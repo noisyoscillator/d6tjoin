@@ -50,6 +50,9 @@ def test_basejoin():
     assert j2.keysdf == [['a', 'b'], ['a', 'c']]
     assert j3.keysdf == j2.keysdf
 
+# ******************************************
+# prejoin
+# ******************************************
 def test_prejoin():
     df1 = pd.DataFrame({'a': range(3), 'b': range(3)})
     df2 = pd.DataFrame({'a': range(3), 'c': range(3)})
@@ -138,4 +141,95 @@ def test_prejoin():
     assert dfr['left'].empty
     assert dfr['right'].empty
 
-test_prejoin()
+
+# ******************************************
+# fuzzy join
+# ******************************************
+from faker import Faker
+import importlib
+
+import d6tjoin.smart_join
+importlib.reload(d6tjoin.smart_join)
+cfg_num_unmatched = 2
+
+def test_fakedata_singlekey():
+
+    fake = Faker()
+    fake.seed(1)
+
+    pool_names = [fake.name() for _ in range(10)]
+    pool_names_unmatched_left = pool_names[:cfg_num_unmatched]
+
+    # case single key unmatched
+    df1=pd.DataFrame({'key':pool_names[:-cfg_num_unmatched]})
+    df2=pd.DataFrame({'key':pool_names[cfg_num_unmatched:]})
+    df1['val1']=range(df1.shape[0])
+    df2['val2']=range(df2.shape[0])
+
+
+    with pytest.raises(ValueError) as e_info:
+        d6tjoin.smart_join.FuzzyJoin([df1, df2], [], [])
+    with pytest.raises(KeyError) as e_info:
+        d6tjoin.smart_join.FuzzyJoin([df1,df2], fuzzy_keys=['unmatched'])
+
+    importlib.reload(d6tjoin.smart_join)
+    sj = d6tjoin.smart_join.FuzzyJoin([df1,df2],fuzzy_keys=['key'])
+    assert sj.keysdf_fuzzy == [['key']]*2
+    assert sj.keysdf_exact == []
+
+    import jellyfish
+    def diff_edit(a, b):
+        return jellyfish.levenshtein_distance(a, b)
+    def diff_hamming(a, b):
+        return jellyfish.hamming_distance(a, b)
+
+    sj = d6tjoin.smart_join.FuzzyJoin([df1,df2],fuzzy_keys=['key'])
+    dfr = sj._gen_match_top1(0)['table'].copy()
+    assert sj._gen_match_top1(0)['has duplicates']
+    assert set(dfr.loc[dfr['__top1diff__']>0,'__top1left__'].unique()) == set(pool_names_unmatched_left)
+    assert dfr.loc[dfr['__top1diff__']>0,'__top1right__'].values.tolist() == ['Teresa James', 'Rachel Davis', 'Teresa James']
+    dfr['__top1diff__check'] = dfr.apply(lambda x: diff_edit(x['__top1left__'],x['__top1right__']),1)
+    assert (dfr['__top1diff__']==dfr['__top1diff__check']).all()
+
+    sj.set_fuzzy_how(0,{'fun_diff':[diff_hamming,diff_edit]})
+    dfr = sj._gen_match_top1(0)['table'].copy()
+    assert dfr.loc[dfr['__top1diff__']>0,'__top1right__'].values.tolist() == ['Teresa James', 'Amanda Johnson']
+    assert not sj._gen_match_top1(0)['has duplicates']
+
+
+    sj = d6tjoin.smart_join.FuzzyJoin([df1,df2],fuzzy_keys=['key'])
+    dfr1 = sj._gen_match_top1(0)['table']
+    # assert df1.shape[0] == dfr1.shape[0] # todo: deal with duplicates
+    dfr2 = sj.join(True)
+    assert np.array_equal(dfr1['__top1diff__'].sort_values().values, dfr2['__top1diff__key'].sort_values().values)
+
+
+def test_fakedata_multikey():
+
+    fake = Faker()
+    fake.seed(1)
+
+    pool_names = [fake.name() for _ in range(10)]
+    pool_dates = pd.date_range('1/1/2018',periods=10)
+
+    # case multikey
+    df1=pd.DataFrame({'key':pool_names[:-cfg_num_unmatched],'date':pool_dates[:-cfg_num_unmatched]})
+    df2=pd.DataFrame({'key':pool_names[cfg_num_unmatched:],'date':pool_dates[cfg_num_unmatched:]})
+    df1['val1']=range(df1.shape[0])
+    df2['val2']=range(df2.shape[0])
+
+    with pytest.raises(KeyError) as e_info:
+        d6tjoin.smart_join.FuzzyJoin([df1,df2], fuzzy_keys=['key','key'], fuzzy_how=[{'fundiff':None},])
+
+    importlib.reload(d6tjoin.smart_join)
+    sj = d6tjoin.smart_join.FuzzyJoin([df1,df2],fuzzy_keys=['key','date'])
+    dfr = sj.join(True)
+    assert df1.shape[0] == dfr.shape[0]
+
+    df1
+    sj.join()
+    sj._gen_match_top1(0)['table']
+    sj._gen_match_top1(1)['table']
+
+
+test_fakedata_singlekey()
