@@ -103,6 +103,9 @@ class FuzzyJoinTop1(BaseJoin):
         self.cfg_njoins_exact = len(self.keysdf_exact[0]) if self.keysdf_exact else 0
         self.cfg_njoins_fuzzy = len(self.keysdf_fuzzy[0]) if self.keysdf_fuzzy else 0
 
+        if self.cfg_njoins_fuzzy>1:
+            raise NotImplementedError('Currently supports only 1 fuzzy key')
+
         self.exact_how = exact_how
         self.set_fuzzy_how_all(fuzzy_how)
 
@@ -137,21 +140,26 @@ class FuzzyJoinTop1(BaseJoin):
             keyleft = self.keys_fuzzy[ilevel][0]
             keyright = self.keys_fuzzy[ilevel][1]
 
+            typeleft = self.dfs[0][keyleft].dtype
+            typeright = self.dfs[1][keyright].dtype
+            if not typeleft==typeright:
+                raise ValueError('column type need to be of same type to join ', self.keysdf_exact[0][ilevel], typeleft, self.keysdf_exact[1][ilevel], typeright )
+
+            if 'type' not in cfg_top1:
+                if typeleft == 'int64' or typeleft == 'float64' or typeleft == 'datetime64[ns]':
+                    cfg_top1['type'] = 'number'
+                elif typeleft == 'object' and type(self.dfs[0][keyleft].values[~self.dfs[0][keyleft].isnull()][0])==str:
+                    cfg_top1['type'] = 'string'
+                else:
+                    raise ValueError('Unrecognized data type for top match, need to pass fun_diff in arguments')
+
             # make defaults if no settings provided
             if 'fun_diff' not in cfg_top1:
 
-                typeleft = self.dfs[0][keyleft].dtype
-                typeright = self.dfs[1][keyright].dtype
-
-                if not typeleft==typeright:
-                    raise ValueError('column type need to be of same type to join ', self.keysdf_exact[0][ilevel], typeleft, self.keysdf_exact[1][ilevel], typeright )
-
-                if typeleft == 'int64' or typeleft == 'float64' or typeleft == 'datetime64[ns]':
-                    cfg_top1['fun_diff'] = 'merge_asof'
-                    cfg_top1['type'] = 'number'
-                elif typeleft == 'object' and type(self.dfs[0][keyleft].values[~self.dfs[0][keyleft].isnull()][0])==str:
+                if cfg_top1['type'] == 'number':
+                    cfg_top1['fun_diff'] = pd.merge_asof
+                elif cfg_top1['type'] == 'string':
                     cfg_top1['fun_diff'] = diff_edit
-                    cfg_top1['type'] = 'string'
                 else:
                     raise ValueError('Unrecognized data type for top match, need to pass fun_diff in arguments')
             else:
@@ -161,7 +169,6 @@ class FuzzyJoinTop1(BaseJoin):
 
             if not type(cfg_top1['fun_diff']) == list:
                 cfg_top1['fun_diff'] = [cfg_top1['fun_diff']]
-
 
             if 'top_limit' not in cfg_top1:
                 cfg_top1['top_limit'] = None
@@ -252,7 +259,7 @@ class FuzzyJoinTop1(BaseJoin):
             cfg_group_left = self.keysdf_exact[0] if self.keysdf_exact else []
             cfg_group_right = self.keysdf_exact[1] if self.keysdf_exact else []
 
-            if cfg_top1['type'] == 'string' or (cfg_top1['type'] == 'number' and cfg_top1['fun_diff'] != ['merge_asof']):
+            if cfg_top1['type'] == 'string' or (cfg_top1['type'] == 'number' and cfg_top1['fun_diff'] != [pd.merge_asof]):
 
                 if len(cfg_group_left)>0:
                     # generate candidates if exact matches are present
@@ -292,7 +299,7 @@ class FuzzyJoinTop1(BaseJoin):
                 df_match = dfg.copy()
                 # df_match = prep_match_df(dfg.copy())
 
-            elif cfg_top1['type'] == 'number' and cfg_top1['fun_diff'] == ['merge_asof']:
+            elif cfg_top1['type'] == 'number' and cfg_top1['fun_diff'] == [pd.merge_asof]:
                 df_match = self._gen_match_top1_left_number(cfg_group_left, cfg_group_right, keyleft, keyright, top_nrecords).copy()
                 # filtering
                 if not top_limit is None:
@@ -340,16 +347,7 @@ class FuzzyJoinTop1(BaseJoin):
             cfg_keys_left = cfg_group_left+['__top1right__'+k for k in self.keysdf_fuzzy[0]]
             cfg_keys_right = cfg_group_right+[k for k in self.keysdf_fuzzy[1]]
 
-            self.dfjoined = self.dfjoined
-
-            import d6tjoin.utils
-            j = d6tjoin.utils.PreJoin([self.dfjoined, self.dfs[1]], [cfg_keys_left, cfg_keys_right], keys_bydf=True)
-            j.stats_prejoin(print_only=False)
-            j.show_unmatched('key')['right']
-
-            self.dfjoined
-            self.dfjoined.merge(self.dfs[1], left_on = cfg_keys_left, right_on = cfg_keys_right, suffixes=['','__right__'], how='left')
-            self.dfjoined.merge(self.dfs[1], left_on = cfg_keys_left, right_on = cfg_keys_right, suffixes=['','__right__'])
+            self.dfjoined = self.dfjoined.merge(self.dfs[1], left_on = cfg_keys_left, right_on = cfg_keys_right, suffixes=['','__right__'])
 
             if not is_keep_debug:
                 self.dfjoined = self.dfjoined[self.dfjoined.columns[~self.dfjoined.columns.str.startswith('__')]]

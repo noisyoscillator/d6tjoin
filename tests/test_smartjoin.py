@@ -245,9 +245,12 @@ def test_fakedata_singlekey_number():
     dfc0 = pd.merge_asof(df1.sort_values('date'), df2.sort_values('date2'), left_on='date', right_on='date2', by='grp', direction='nearest')
     dfc = dfc0.rename(columns={'date':'__top1left__','date2':'__top1right__'})
     dfc['__top1diff__'] = (dfc['__top1left__'] - dfc['__top1right__']).abs()
-    dfc = dfc[dfr.columns]
+    dfc = dfc[dfr.columns.tolist()]
 
     assert dfr.equals(dfc)
+
+    dfc['__match type__'] = 'exact'
+    dfc.loc[dfc['__top1diff__'].dt.days>0,'__match type__'] = 'top1 left'
 
     assert sj._gen_match_top1(0)['table'].equals(dfc)
     assert sj.join().sort_values(['date','grp']).reset_index(drop=True).equals(dfc0)
@@ -267,13 +270,15 @@ def test_fakedata_multikey():
     df1['val1']=range(df1.shape[0])
     df2['val2']=range(df2.shape[0])
 
-    with pytest.raises(ValueError) as e_info:
-        d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','key'], fuzzy_how=[])
+    with pytest.raises(NotImplementedError) as e_info:
+        d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','date'])
 
-    importlib.reload(d6tjoin.smart_join)
-    sj = d6tjoin.smart_join.FuzzyJoinTop1([df1,df2],fuzzy_keys=['key','date'])
-    dfr = sj.join(True)
-    assert df1.shape[0] == dfr.shape[0]
-    sj.join()
+    # with pytest.raises(ValueError) as e_info:
+    #     d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','key'], fuzzy_how=[])
+    #
+    # importlib.reload(d6tjoin.smart_join)
+    # sj = d6tjoin.smart_join.FuzzyJoinTop1([df1,df2],fuzzy_keys=['key','date'])
+    # dfr = sj.join(True)
+    # assert df1.shape[0] == dfr.shape[0]
 
-# test_fakedata_multikey()
+# test_fakedata_singlekey_number()
