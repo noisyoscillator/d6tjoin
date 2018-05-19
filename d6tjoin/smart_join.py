@@ -220,8 +220,8 @@ class FuzzyJoinTop1(BaseJoin):
             if top_nrecords:
                 values_left = values_left[:top_nrecords]
 
-            df_keys_left = pd.DataFrame({'__top1left__':values_left})
-            df_keys_right = pd.DataFrame({'__top1right__':values_right})
+            df_keys_left = pd.DataFrame({'__top1left__':values_left}).sort_values('__top1left__')
+            df_keys_right = pd.DataFrame({'__top1right__':values_right}).sort_values('__top1right__')
 
             df_match = pd.merge_asof(df_keys_left, df_keys_right, left_on='__top1left__', right_on='__top1right__', direction='nearest')
 
@@ -328,7 +328,7 @@ class FuzzyJoinTop1(BaseJoin):
 
     def join(self, is_keep_debug=False):
         if self.cfg_njoins_fuzzy==0:
-            self.dfjoined = self.dfs[0].merge(self.dfs[1], left_on=self.keysdf[0], right_on=self.keysdf[1], how=self.exact_how)
+            self.dfjoined = self.dfs[0].merge(self.dfs[1], left_on=self.keysdf_exact[0], right_on=self.keysdf_exact[1], how=self.exact_how)
         else:
 
             self.run_match_top1_all()

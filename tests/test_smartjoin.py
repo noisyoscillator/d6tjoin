@@ -282,3 +282,18 @@ def test_fakedata_multikey():
     # assert df1.shape[0] == dfr.shape[0]
 
 # test_fakedata_singlekey_number()
+
+def fiddle():
+    cfg_path_folder_base = '/mnt/data/data.raw/travelclick/'
+    from d6tstack.read_excel_adv import read_excel_advanced
+    cfg_path = cfg_path_folder_base+'predict/STR Rolling Weekly Since 9-11-01 to 4-14-18 values weekly.xlsx'
+    df_str=read_excel_advanced(cfg_path, header_xls_start="A7", header_xls_end="D7",remove_blank_cols=True,remove_blank_rows=True)
+    df_str['STAY_WEEK'] = df_str['Date']-pd.DateOffset(days=6)
+    df_str.head()
+
+    df_alltier2 = pd.read_excel(cfg_path_folder_base + 'predict/travelcity-revpar-unsorted.xlsx')
+    sj = d6tjoin.smart_join.FuzzyJoinTop1([df_alltier2,df_str],fuzzy_keys=['STAY_WEEK'])
+    sj._gen_match_top1(0)
+
+fiddle()
+
