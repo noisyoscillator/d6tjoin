@@ -256,7 +256,7 @@ def test_fakedata_singlekey_number():
     assert sj.join().sort_values(['date','grp']).reset_index(drop=True).equals(dfc0)
 
 
-def test_fakedata_multikey():
+def fakedata_multikey():
 
     fake = Faker()
     fake.seed(1)
@@ -270,8 +270,22 @@ def test_fakedata_multikey():
     df1['val1']=range(df1.shape[0])
     df2['val2']=range(df2.shape[0])
 
+    cfg_group_left=['date']
+    cfg_group_right=cfg_group_left
+    keyleft='key'
+    keyright=keyleft
+
+    '''
+    from d6tjoin.smart_join import apply_gen_candidates_group
+    df_keys_left = pd.DataFrame(df1.groupby(cfg_group_left)[keyleft].unique())
+    df_keys_right = pd.DataFrame(df2.groupby(cfg_group_right)[keyright].unique())
+    df_keysets_groups = df_keys_left.merge(df_keys_right, left_index=True, right_index=True)
+    df_keysets_groups.columns = ['__top1left__', '__top1right__']
+    dfg = df_keysets_groups.reset_index().groupby(cfg_group_left).apply(apply_gen_candidates_group)
+    dfg = dfg.reset_index(-1, drop=True).reset_index()
+    '''
     with pytest.raises(NotImplementedError) as e_info:
-        d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','date'])
+            d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','date'])
 
     # with pytest.raises(ValueError) as e_info:
     #     d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','key'], fuzzy_how=[])
@@ -281,7 +295,7 @@ def test_fakedata_multikey():
     # dfr = sj.join(True)
     # assert df1.shape[0] == dfr.shape[0]
 
-# test_fakedata_singlekey_number()
+# fakedata_multikey()
 
 def fiddle():
     cfg_path_folder_base = '/mnt/data/data.raw/travelclick/'
@@ -295,5 +309,5 @@ def fiddle():
     sj = d6tjoin.smart_join.FuzzyJoinTop1([df_alltier2,df_str],fuzzy_keys=['STAY_WEEK'])
     sj._gen_match_top1(0)
 
-fiddle()
+# fiddle()
 

@@ -262,7 +262,7 @@ class FuzzyJoinTop1(BaseJoin):
             if cfg_top1['type'] == 'string' or (cfg_top1['type'] == 'number' and cfg_top1['fun_diff'] != [pd.merge_asof]):
 
                 if len(cfg_group_left)>0:
-                    # generate candidates if exact matches are present
+                    # generate candidates if exact matches are present (= blocking index)
 
                     if top_nrecords is None:
                         df_keys_left = pd.DataFrame(self.dfs[0].groupby(cfg_group_left)[keyleft].unique())
@@ -285,6 +285,17 @@ class FuzzyJoinTop1(BaseJoin):
                     else:
                         dfg = apply_gen_candidates(values_left[:top_nrecords], values_right)
 
+
+                # find exact matches and remove from candidates
+                # todo: use set logic before generating candidates
+                idxSelExact = dfg['__top1left__']==dfg['__top1right__']
+                df_match_exact = dfg[idxSelExact].copy()
+                df_match_exact['__match type__'] = 'exact'
+                df_match_exact['__top1diff__'] = 0
+
+                idxSel = dfg['__top1left__'].isin(df_match_exact['__top1left__'])
+                dfg = dfg[~idxSel]
+
                 for fun_diff in cfg_top1['fun_diff']:
                     dfg['__top1diff__'] = dfg.apply(lambda x: fun_diff(x['__top1left__'], x['__top1right__']), axis=1)
 
@@ -296,19 +307,21 @@ class FuzzyJoinTop1(BaseJoin):
                     dfg = dfg.groupby('__top1left__',group_keys=False).apply(lambda x: filter_group_minmax(x,'__top1diff__'))
 
                 # return results
-                df_match = dfg.copy()
-                # df_match = prep_match_df(dfg.copy())
+                dfg['__match type__'] = 'top1 left'
+                df_match = pd.concat([dfg,df_match_exact])
 
             elif cfg_top1['type'] == 'number' and cfg_top1['fun_diff'] == [pd.merge_asof]:
                 df_match = self._gen_match_top1_left_number(cfg_group_left, cfg_group_right, keyleft, keyright, top_nrecords).copy()
+
                 # filtering
                 if not top_limit is None:
                     df_match = df_match[df_match['__top1diff__'] <= top_limit]
+
+                df_match['__match type__'] = 'top1 left'
+                df_match.loc[df_match['__top1left__'] == df_match['__top1right__'], '__match type__'] = 'exact'
             else:
                 raise ValueError('Dev error: cfg_top1["type/fun_diff"]')
 
-            df_match['__match type__'] = 'top1 left'
-            df_match.loc[df_match['__top1left__']==df_match['__top1right__'],'__match type__'] = 'exact'
 
         #******************************************
         # table RIGHT
