@@ -159,9 +159,6 @@ class PreJoin(BaseJoin):
             vl = next(iter(df_key['keyset left'])) # take first element
             vr = next(iter(df_key['keyset right'])) # take first element
 
-            if not type(vl)==type(vr):
-                raise ValueError('keys need to be of same type to join', df_key['keyset left'], df_key['keyset right'])
-
             df_key['value type'] = type(vl)
 
             self.keysets.append(df_key)
