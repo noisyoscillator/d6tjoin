@@ -311,8 +311,17 @@ class PreJoin(BaseJoin):
             if self.keysall[self.cfg_show_level][idf] == self.cfg_show_key:  # check if key applies
                 self._show_prep_df(idf, mode)
 
-    def show_unmatched(self, key, nrecords=3, nrows=3, keys_only=True, print_only=False):
-        # global vars
+    def show_unmatched(self, key, nrecords=3, nrows=3, keys_only=False, print_only=False):
+        """
+        Show unmatched records
+
+        Args:
+            key (str): join key
+            nrecords (int): number of unmatched records
+            nrows (int): number of rows
+            keys_only (bool): show only join keys
+            print_only (bool): if false return results instead of printing
+        """
         self.df_show_out = {}
         self.cfg_show_key = key
         self.cfg_show_nrecords = nrecords
@@ -324,8 +333,17 @@ class PreJoin(BaseJoin):
         if not self.cfg_show_print_only:
             return self.df_show_out
 
-    def show_matched(self, key, nrecords=3, nrows=3, keys_only=True, print_only=False):
-        # global vars
+    def show_matched(self, key, nrecords=3, nrows=3, keys_only=False, print_only=False):
+        """
+        Show matched records
+
+        Args:
+            key (str): join key
+            nrecords (int): number of unmatched records
+            nrows (int): number of rows
+            keys_only (bool): show only join keys
+            print_only (bool): if false return results instead of printing
+        """
         self.df_show_out = {}
         self.cfg_show_key = key
         self.cfg_show_nrecords = nrecords
