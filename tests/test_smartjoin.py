@@ -332,6 +332,29 @@ tests for factor data id vs date, id matching
 
 # fakedata_multikey()
 
+
+def test_fakedata_multikey_iddate():
+    import uuid
+    import itertools
+
+    nobs = 10
+    uuid1 = [str(uuid.uuid4()) for _ in range(nobs)]
+    dates1 = pd.date_range('1/1/2010','1/1/2011')
+
+    df1 = pd.DataFrame(list(itertools.product(uuid1, dates1)), columns=['id', 'date'])
+    df1['v'] = np.random.sample(df1.shape[0])
+    df2 = df1.copy()
+    df2['id'] = df1['id'].str[1:-1]
+
+    sj = d6tjoin.smart_join.FuzzyJoinTop1([df1, df2], exact_keys=['date'], fuzzy_keys=['id'])
+    dft = sj.preview_fuzzy(0)
+    dft.shape
+    dft = sj._gen_match_top1(0)
+    dft['table'].shape
+
+    print('a')
+
+
 def fiddle():
     cfg_path_folder_base = '/mnt/data/data.raw/travelclick/'
     from d6tstack.read_excel_adv import read_excel_advanced
@@ -346,4 +369,4 @@ def fiddle():
 
 # fiddle()
 
-test_fakedata_singlekey_string()
+test_fakedata_multikey_iddate()

@@ -188,9 +188,9 @@ class FuzzyJoinTop1(BaseJoin):
 
     def preview_fuzzy(self, ilevel, top_nrecords=5):
         if top_nrecords>0:
-            return self._gen_match_top1(top_nrecords)
+            return self._gen_match_top1(ilevel, top_nrecords)
         else:
-            return self._gen_match_top1()
+            return self._gen_match_top1(ilevel)
 
     def _gen_match_top1_left_number(self, cfg_group_left, cfg_group_right, keyleft, keyright, top_nrecords):
         if len(cfg_group_left) > 0:
