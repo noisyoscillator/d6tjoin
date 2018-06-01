@@ -287,6 +287,41 @@ def fakedata_multikey():
     with pytest.raises(NotImplementedError) as e_info:
             d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','date'])
 
+
+    '''
+    cfg_num_per_group = 4
+    pool_date1 = pd.date_range('1/1/2010',periods=cfg_num_per_group,freq='1M')
+    pool_date2 = pd.bdate_range('1/1/2010',periods=cfg_num_per_group,freq='1BM')
+    
+    def gen_df(cfg_pool_rates, cfg_offset=0):
+        dfg=[]
+        for i in range(cfg_num_per_group):
+            dft = pd.DataFrame({'key':np.roll(pool_names,i+cfg_offset)[:cfg_num_per_group+cfg_offset]})
+            dft['date']=cfg_pool_rates[i]
+            dft['value']=np.random.randn(dft.shape[0])
+            dfg.append(dft)    
+        return pd.concat(dfg)    
+    
+    df1 = gen_df(pool_date1)
+    df2 = gen_df(pool_date2,2)
+    df1
+    df2
+
+
+tests fuzzy string, exact keys
+tests fuzzy number int+float
+tests with nans
+groupby unique deal with nans
+
+merge just the keys together [often date, key = 1 row...]
+=> as soon as have >1 fuzzy key need to specify if hierarchical 
+// does it increase the compute complexity? have to do the same all pairs compute for every date!!
+=> do global match, from there find the closest ones by date
+
+explain: warnings.warn('Multi-key fuzzy joins are currently done globally for each key indivudally, not hierarchically for each unique fuzzy key value pair')
+tests for factor data id vs date, id matching
+    
+    '''
     # with pytest.raises(ValueError) as e_info:
     #     d6tjoin.smart_join.FuzzyJoinTop1([df1,df2], fuzzy_keys=['key','key'], fuzzy_how=[])
     #
@@ -311,3 +346,4 @@ def fiddle():
 
 # fiddle()
 
+test_fakedata_singlekey_string()

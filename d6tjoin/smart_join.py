@@ -2,9 +2,11 @@ import pandas as pd
 import numpy as np
 from collections import OrderedDict
 import itertools
+import warnings
 import jellyfish
 
 from d6tjoin.utils import BaseJoin
+
 
 # ******************************************
 # helpers
@@ -12,6 +14,7 @@ from d6tjoin.utils import BaseJoin
 def set_values(dfg, key):
     v = dfg[key].unique()
     return v[~pd.isnull(v)]
+
 
 def apply_gen_candidates_group(dfg):
     return pd.DataFrame(list(itertools.product(dfg['__top1left__'].values[0],dfg['__top1right__'].values[0])),columns=['__top1left__','__top1right__'])
@@ -104,7 +107,8 @@ class FuzzyJoinTop1(BaseJoin):
         self.cfg_njoins_fuzzy = len(self.keysdf_fuzzy[0]) if self.keysdf_fuzzy else 0
 
         if self.cfg_njoins_fuzzy>1:
-            raise NotImplementedError('Currently supports only 1 fuzzy key')
+        #     raise NotImplementedError('Currently supports only 1 fuzzy key')
+            warnings.warn('Multi-key fuzzy joins are currently done globally for each key indivudally, not hierarchically for each unique fuzzy key value pair')
 
         self.exact_how = exact_how
         self.set_fuzzy_how_all(fuzzy_how)
