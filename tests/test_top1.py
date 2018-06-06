@@ -1,4 +1,6 @@
+import numpy as np
 import pandas as pd
+pd.set_option('display.expand_frame_repr', False)
 import importlib
 import d6tjoin.top1
 import jellyfish
@@ -46,17 +48,33 @@ def test_top1_gen_candidates():
 def test_top1_str():
 
     df1, df2 = gen_df2_str()
-    dfr = d6tjoin.top1.allpairs_diff(df1, df2,'id','id',jellyfish.levenshtein_distance)
-    assert dfr['__top1diff__'].min()==0
-    assert dfr.loc[dfr['__matchtype__']=='top1 left','__top1diff__'].min()==1
-    assert dfr.loc[dfr['__matchtype__']=='top1 left','__top1diff__'].max()==2
 
     r = d6tjoin.top1.merge_top1_diff(df1, df2,'id','id',jellyfish.levenshtein_distance)
+    dfr = r['top1']
+    assert dfr['__top1diff__'].min()==0
+    assert dfr['__top1diff__'].max()==1
+    assert dfr.shape==(3, 4)
     dfr = r['merged']
+    assert dfr.shape==(48, 4)
+    assert np.all(dfr.groupby('id').size().values==np.array([16, 32]))
 
     df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=False)
-    r = d6tjoin.top1.merge_top1_diff_withblock(df1, df2,'key','key',jellyfish.levenshtein_distance,['date'],['date'])
-    r['merged']
+    r = d6tjoin.top1.merge_top1_diff(df1, df2,'key','key',jellyfish.levenshtein_distance,['date'],['date'])
+    dfr = r['merged']
+    assert dfr.shape==(18, 5)
+    assert np.all(dfr.groupby(['date','key']).size().values==np.array([1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
+
+    df1.head()
+    df1.merge(df2, on=['date','key']).head()
+    dfr.head()
+
+    df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=True)
+    r = d6tjoin.top1.MergeTop1Number(df1, df2,'date','date').merge()
+    dfr = r['merged']
+
+    df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=True)
+    r = d6tjoin.top1.MergeTop1Number(df1, df2,'date','date',['key'],['key']).merge()
+    dfr = r['merged']
 
     assert True
 
