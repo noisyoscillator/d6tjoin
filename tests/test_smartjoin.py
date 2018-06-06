@@ -16,6 +16,52 @@ cfg_num_matched = cfg_num-cfg_num_unmatched
 from d6tjoin.utils import df_str_summary, BaseJoin, PreJoin
 
 # ******************************************
+# helpers
+# ******************************************
+def gen_multikey_simple():
+    fake = Faker()
+    fake.seed(1)
+
+    pool_names = [fake.name() for _ in range(cfg_num)]
+    pool_dates = pd.date_range('1/1/2018', periods=cfg_num)
+
+    # case multikey
+    df1 = pd.DataFrame({'key': pool_names[:-cfg_num_unmatched], 'date': pool_dates[:-cfg_num_unmatched]})
+    df2 = pd.DataFrame({'key': pool_names[cfg_num_unmatched:], 'date': pool_dates[cfg_num_unmatched:]})
+    df1['val1'] = range(df1.shape[0])
+    df2['val2'] = range(df2.shape[0])
+
+    return df1, df2
+
+def gen_multikey_complex(unmatched_date=True):
+
+    fake = Faker()
+    fake.seed(1)
+
+    pool_names = [fake.name() for _ in range(cfg_num)]
+    cfg_num_per_group = 4
+    pool_date1 = pd.date_range('1/1/2010', periods=cfg_num_per_group, freq='1M')
+    if unmatched_date:
+        pool_date2 = pd.bdate_range('1/1/2010', periods=cfg_num_per_group, freq='1BM')
+    else:
+        pool_date2 = pool_date1
+
+    def gen_df(cfg_pool_rates, cfg_offset=0):
+        dfg = []
+        for i in range(cfg_num_per_group):
+            dft = pd.DataFrame({'key': np.roll(pool_names, i + cfg_offset)[:cfg_num_per_group]})
+            dft['date'] = cfg_pool_rates[i]
+            dft['value'] = np.random.randn(dft.shape[0])
+            dfg.append(dft)
+        return pd.concat(dfg)
+
+    df1 = gen_df(pool_date1)
+    df2 = gen_df(pool_date2, 2)
+
+    return df1, df2
+
+
+# ******************************************
 # utils
 # ******************************************
 
@@ -258,17 +304,7 @@ def test_fakedata_singlekey_number():
 
 def fakedata_multikey():
 
-    fake = Faker()
-    fake.seed(1)
-
-    pool_names = [fake.name() for _ in range(cfg_num)]
-    pool_dates = pd.date_range('1/1/2018',periods=cfg_num)
-
-    # case multikey
-    df1=pd.DataFrame({'key':pool_names[:-cfg_num_unmatched],'date':pool_dates[:-cfg_num_unmatched]})
-    df2=pd.DataFrame({'key':pool_names[cfg_num_unmatched:],'date':pool_dates[cfg_num_unmatched:]})
-    df1['val1']=range(df1.shape[0])
-    df2['val2']=range(df2.shape[0])
+    df1, df2 = gen_multikey_simple()
 
     cfg_group_left=['date']
     cfg_group_right=cfg_group_left
@@ -289,21 +325,6 @@ def fakedata_multikey():
 
 
     '''
-    cfg_num_per_group = 4
-    pool_date1 = pd.date_range('1/1/2010',periods=cfg_num_per_group,freq='1M')
-    pool_date2 = pd.bdate_range('1/1/2010',periods=cfg_num_per_group,freq='1BM')
-    
-    def gen_df(cfg_pool_rates, cfg_offset=0):
-        dfg=[]
-        for i in range(cfg_num_per_group):
-            dft = pd.DataFrame({'key':np.roll(pool_names,i+cfg_offset)[:cfg_num_per_group+cfg_offset]})
-            dft['date']=cfg_pool_rates[i]
-            dft['value']=np.random.randn(dft.shape[0])
-            dfg.append(dft)    
-        return pd.concat(dfg)    
-    
-    df1 = gen_df(pool_date1)
-    df2 = gen_df(pool_date2,2)
     df1
     df2
 
@@ -341,8 +362,18 @@ def test_fakedata_multikey_iddate():
     uuid1 = [str(uuid.uuid4()) for _ in range(nobs)]
     dates1 = pd.date_range('1/1/2010','1/1/2011')
 
+    dates2 = pd.bdate_range('1/1/2010', '1/1/2011')  # business instead of calendar dates
+
     df1 = pd.DataFrame(list(itertools.product(uuid1, dates1)), columns=['id', 'date'])
     df1['v'] = np.random.sample(df1.shape[0])
+
+    df2 = pd.DataFrame(list(itertools.product(uuid1, dates2)), columns=['id', 'date'])
+    df2['v'] = np.random.sample(df2.shape[0])
+
+    sj = d6tjoin.smart_join.FuzzyJoinTop1([df1, df2], exact_keys=['id'], fuzzy_keys=['date'])
+    dft = sj.preview_fuzzy(0)
+
+
     df2 = df1.copy()
     df2['id'] = df1['id'].str[1:-1]
 
@@ -369,4 +400,4 @@ def fiddle():
 
 # fiddle()
 
-test_fakedata_multikey_iddate()
+# test_fakedata_multikey_iddate()
