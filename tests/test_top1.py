@@ -28,7 +28,7 @@ def test_top1_gen_candidates():
 
     def helper(df1, df2):
 
-        dfr = d6tjoin.top1.allpairs_candidates(df1, df2,'id','id')
+        dfr = d6tjoin.top1.MergeTop1Diff(df1, df2,'id','id')._allpairs_candidates()
         assert dfr.shape==(4, 3)
         assert (dfr['__top1left__']==df1.values[0]).sum()==1
         assert (dfr['__top1left__']==df1.values[1]).sum()==3
@@ -49,7 +49,7 @@ def test_top1_str():
 
     df1, df2 = gen_df2_str()
 
-    r = d6tjoin.top1.merge_top1_diff(df1, df2,'id','id',jellyfish.levenshtein_distance)
+    r = d6tjoin.top1.MergeTop1Diff(df1, df2,'id','id',jellyfish.levenshtein_distance).merge()
     dfr = r['top1']
     assert dfr['__top1diff__'].min()==0
     assert dfr['__top1diff__'].max()==1
@@ -59,7 +59,7 @@ def test_top1_str():
     assert np.all(dfr.groupby('id').size().values==np.array([16, 32]))
 
     df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=False)
-    r = d6tjoin.top1.merge_top1_diff(df1, df2,'key','key',jellyfish.levenshtein_distance,['date'],['date'])
+    r = d6tjoin.top1.MergeTop1Diff(df1, df2,'key','key',jellyfish.levenshtein_distance,['date'],['date']).merge()
     dfr = r['merged']
     assert dfr.shape==(18, 5)
     assert np.all(dfr.groupby(['date','key']).size().values==np.array([1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
@@ -68,14 +68,33 @@ def test_top1_str():
     df1.merge(df2, on=['date','key']).head()
     dfr.head()
 
+def test_top1_num():
+
     df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=True)
     r = d6tjoin.top1.MergeTop1Number(df1, df2,'date','date').merge()
-    dfr = r['merged']
+    dfr = r['top1']
+    assert dfr.shape==(4, 4)
+    assert np.all(dfr.groupby('__match type__').size().values==np.array([2, 2]))
+    assert dfr['__top1diff__'].dt.days.max()==2
+    assert dfr['__top1diff__'].dt.days.min()==0
 
     df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=True)
     r = d6tjoin.top1.MergeTop1Number(df1, df2,'date','date',['key'],['key']).merge()
     dfr = r['merged']
+    dfr.sort_values(['date','key'])
+    r['top1'].sort_values(['__top1left__','key'])
+    df1.sort_values(['key','date'])
+    df2.sort_values(['key','date'])
+    r['top1']
+
+def test_top1_multi():
+
+    df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=True)
+    df2['key'] = 'Mr. '+df1['key']
+
+    r = d6tjoin.top1.MergeTop1(df1, df2,['date','key'],['date','key']).merge()
+
 
     assert True
 
-test_top1_str()
+test_top1_multi()

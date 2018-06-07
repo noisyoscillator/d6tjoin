@@ -146,8 +146,6 @@ class FuzzyJoinTop1(BaseJoin):
 
             typeleft = self.dfs[0][keyleft].dtype
             typeright = self.dfs[1][keyright].dtype
-            if not typeleft==typeright:
-                raise ValueError('column type need to be of same type to join ', self.keysdf_exact[0][ilevel], typeleft, self.keysdf_exact[1][ilevel], typeright )
 
             if 'type' not in cfg_top1:
                 if typeleft == 'int64' or typeleft == 'float64' or typeleft == 'datetime64[ns]':
