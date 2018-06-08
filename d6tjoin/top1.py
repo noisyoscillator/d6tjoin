@@ -24,8 +24,39 @@ def filter_group_min(dfg, col):
 
 class MergeTop1Diff(object):
 
-    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, fun_diff, exact_left_on=[], exact_right_on=[], is_keep_debug=False):
+    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, fun_diff, exact_left_on=None, exact_right_on=None, top_limit=None, is_keep_debug=False):
+        """
+
+        Left top 1 similarity join on a single key. It applies a difference function to find the key pair with the smallest difference.
+
+        Args:
+            df1 (dataframe): left dataframe onto which the right dataframe is joined
+            df2 (dataframe): right dataframe
+            fuzzy_keys (list): list of join keys for fuzzy joins. See notes for details
+            exact_how (str): exact join mode same as `pd.merge(how='inner')`
+            fuzzy_how (dict): specify fuzzy join options by merge level eg {0:{'top_limit':1}}
+            keys_bydf (bool): if keys list is by dataframe (default) or join level. See notes for details
+
+        Note:
+            * specifying join keys:
+                * if both dataframes have matching columns: `fuzzy_keys=['key1','key2']`
+                * else: `fuzzy_keys=[['key1df1','key1df2'],['key2df1','key2df2']]`
+                    * by default you provide keys by join level eg `[['key1df1','key1df2'],['key2df1','key2df2']]` instead you can also provide keys by dataframe `[['key1df1','key2df1'],['key1df2','key2df2']], keys_bydf=True`
+            * fuzzy_how: controls join options by join level
+                * dict keys are join level eg with `fuzzy_keys=[['key1df1','key1df2'],['key2df1','key2df2']]` you set `fuzzy_how={0:{'top_nrecords':5},0:{'top_nrecords':5}}`
+                * options are:
+                    * fun_diff: difference function or list of difference functions applied sequentially. Needs to be 0=similar and >0 dissimilar
+                    * top_limit: maximum difference, keep only canidates with difference <= top_limit
+                    * top_nrecords: keep only n top_nrecords, good for generating previews
+
+        """
+
         # check exact keys
+        if not exact_left_on:
+            exact_left_on = []
+        if not exact_right_on:
+            exact_right_on = []
+
         if len(exact_left_on) != len(exact_right_on):
             raise ValueError('Need to pass same number of exact keys')
         if not isinstance(exact_left_on, (list)) or not isinstance(exact_right_on, (list)):
@@ -48,6 +79,7 @@ class MergeTop1Diff(object):
         self.cfg_exact_left_on = exact_left_on
         self.cfg_exact_right_on = exact_right_on
         self.cfg_fun_diff = fun_diff
+        self.cfg_top_limit = top_limit
         self.cfg_is_keep_debug = is_keep_debug
 
     def _allpairs_candidates(self):
@@ -86,6 +118,8 @@ class MergeTop1Diff(object):
         has_duplicates = False
 
         df_diff = df_candidates.groupby('__top1left__',group_keys=False).apply(lambda x: filter_group_min(x,'__top1diff__'))
+        if self.cfg_top_limit:
+            df_diff = df_diff[df_diff['__top1diff__']<=self.cfg_top_limit]
         has_duplicates = df_diff.groupby('__top1left__').size().max()>1
         if has_duplicates:
             warnings.warn('Top1 join for %s has duplicates' %self.cfg_fuzzy_left_on)
@@ -118,8 +152,8 @@ class MergeTop1Diff(object):
             return pd.DataFrame(list(itertools.product(dfg['__top1left__'].values[0],dfg['__top1right__'].values[0])),columns=['__top1left__','__top1right__'])
 
         # find key unique values
-        keysleft = self.dfs[0][self.cfg_exact_left_on+[self.cfg_fuzzy_left_on]].drop_duplicates()#.dropna()
-        keysright = self.dfs[1][self.cfg_exact_right_on+[self.cfg_fuzzy_right_on]].drop_duplicates()#.dropna()
+        keysleft = self.dfs[0][self.cfg_exact_left_on+[self.cfg_fuzzy_left_on]].drop_duplicates().dropna()
+        keysright = self.dfs[1][self.cfg_exact_right_on+[self.cfg_fuzzy_right_on]].drop_duplicates().dropna()
         keysleft = {tuple(x) for x in keysleft.values}
         keysright = {tuple(x) for x in keysright.values}
         values_left_exact = keysleft.intersection(keysright)
@@ -154,6 +188,8 @@ class MergeTop1Diff(object):
         df_diff = df_diff.append(df_keys_left_exact)
         df_diff['__top1diff__']=df_diff['__top1diff__'].fillna(0) # exact keys
         df_diff = df_diff.groupby(self.cfg_exact_left_on+['__top1left__'],group_keys=False).apply(lambda x: filter_group_min(x,'__top1diff__'))
+        if self.cfg_top_limit:
+            df_diff = df_diff[df_diff['__top1diff__']<=self.cfg_top_limit]
         has_duplicates = df_diff.groupby(self.cfg_exact_left_on+['__top1left__']).size().max()>1
 
         return df_diff, has_duplicates
@@ -206,9 +242,14 @@ class MergeTop1Diff(object):
 
 class MergeTop1Number(object):
     
-    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, exact_left_on=[], exact_right_on=[], direction='nearest', is_keep_debug=False):
+    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, exact_left_on=None, exact_right_on=None, direction='nearest', top_limit=None, is_keep_debug=False):
 
         # check exact keys
+        if not exact_left_on:
+            exact_left_on = []
+        if not exact_right_on:
+            exact_right_on = []
+
         if len(exact_left_on) != len(exact_right_on):
             raise ValueError('Need to pass same number of exact keys')
         if not isinstance(exact_left_on, (list)) or not isinstance(exact_right_on, (list)):
@@ -231,6 +272,7 @@ class MergeTop1Number(object):
         self.cfg_exact_left_on = exact_left_on
         self.cfg_exact_right_on = exact_right_on
         self.cfg_direction = direction
+        self.cfg_top_limit = top_limit
         self.cfg_is_keep_debug = is_keep_debug
 
     def _top1_diff_withblock(self):
@@ -254,6 +296,8 @@ class MergeTop1Number(object):
         df_diff['__top1diff__'] = (df_diff['__top1left__']-df_diff['__top1right__']).abs()
         df_diff['__matchtype__'] = 'top1 left'
         df_diff.loc[df_diff['__top1left__'] == df_diff['__top1right__'], '__matchtype__'] = 'exact'
+        if self.cfg_top_limit:
+            df_diff = df_diff[df_diff['__top1diff__']<=self.cfg_top_limit]
 
         return df_diff
 
@@ -293,20 +337,29 @@ class MergeTop1Number(object):
 
 class MergeTop1(object):
 
-    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, exact_left_on=[], exact_right_on=[], is_keep_debug=False):
+    def __init__(self, df1, df2, fuzzy_left_on=None, fuzzy_right_on=None, exact_left_on=None, exact_right_on=None, fun_diff = None, top_limit=None, is_keep_debug=False):
 
         # todo: pass custom fundiff
         # todo: pass list of fundiff
 
+        # check fuzzy keys
+        if not fuzzy_left_on or not fuzzy_right_on:
+            raise ValueError('Need to pass fuzzy left and right keys')
+        if len(fuzzy_left_on) != len(fuzzy_right_on):
+            raise ValueError('Need to pass same number of fuzzy left and right keys')
+        self.cfg_njoins_fuzzy = len(fuzzy_left_on)
+
         # check exact keys
+        if not exact_left_on:
+            exact_left_on = []
+        if not exact_right_on:
+            exact_right_on = []
+
         if len(exact_left_on) != len(exact_right_on):
             raise ValueError('Need to pass same number of exact keys')
         if not isinstance(exact_left_on, (list)) or not isinstance(exact_right_on, (list)):
             raise ValueError('Exact keys need to be a list')
-        if not isinstance(fuzzy_left_on, (list)):
-            fuzzy_left_on=[fuzzy_left_on]
-        if not isinstance(fuzzy_right_on, (list)):
-            fuzzy_right_on=[fuzzy_left_on]
+
 
         # use blocking index?
         if not exact_left_on and not exact_right_on:
@@ -315,6 +368,16 @@ class MergeTop1(object):
             self.cfg_is_block = True
         else:
             raise ValueError('Need to pass exact keys for both or neither dataframe')
+
+        # check custom params
+        if not top_limit:
+            top_limit = [None,]*self.cfg_njoins_fuzzy
+        if not fun_diff:
+            fun_diff = [None,]*self.cfg_njoins_fuzzy
+        if not isinstance(top_limit, (list,)) or not len(top_limit)==self.cfg_njoins_fuzzy:
+            raise NotImplementedError('top_limit needs to a list with entries for each fuzzy join key')
+        if not isinstance(fun_diff, (list,)) or not len(top_limit)==self.cfg_njoins_fuzzy:
+            raise NotImplementedError('fun_diff needs to a list with entries for each fuzzy join key')
 
         # store data
         self.dfs = [df1,df2]
@@ -325,6 +388,8 @@ class MergeTop1(object):
         # todo: exact keys by fuzzy key? or just global?
         self.cfg_exact_left_on = exact_left_on
         self.cfg_exact_right_on = exact_right_on
+        self.cfg_top_limit = top_limit
+        self.cfg_fun_diff = fun_diff
         self.cfg_is_keep_debug = is_keep_debug
 
     def merge(self):
@@ -334,18 +399,22 @@ class MergeTop1(object):
         cfg_exact_left_on = self.cfg_exact_left_on
         cfg_exact_right_on = self.cfg_exact_right_on
 
+        a=1
         for ilevel, ikey in enumerate(self.cfg_fuzzy_left_on):
             keyleft = ikey
             keyright = self.cfg_fuzzy_right_on[ilevel]
             typeleft = self.dfs[0][keyleft].dtype
 
-            if typeleft == 'int64' or typeleft == 'float64' or typeleft == 'datetime64[ns]':
-                df_diff_bylevel[ikey] = MergeTop1Number(self.dfjoined, self.dfs[1], keyleft, keyright, cfg_exact_left_on, cfg_exact_right_on).top1_diff()
-            elif typeleft == 'object' and type(self.dfs[0][keyleft].values[0])==str:
-                df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, jellyfish.levenshtein_distance, cfg_exact_left_on, cfg_exact_right_on).top1_diff()[0]
-                # todo: handle duplicates
+            if self.cfg_fun_diff[ilevel]:
+                df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, self.cfg_fun_diff[ilevel], cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel]).top1_diff()[0]
             else:
-                raise ValueError('Unrecognized data type for top match, need to pass fun_diff in arguments')
+                if typeleft == 'int64' or typeleft == 'float64' or typeleft == 'datetime64[ns]':
+                    df_diff_bylevel[ikey] = MergeTop1Number(self.dfjoined, self.dfs[1], keyleft, keyright, cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel]).top1_diff()
+                elif typeleft == 'object' and type(self.dfs[0][keyleft].values[0])==str:
+                    df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, jellyfish.levenshtein_distance, cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel]).top1_diff()[0]
+                    # todo: handle duplicates
+                else:
+                    raise ValueError('Unrecognized data type for top match, need to pass fun_diff in arguments')
 
             self.dfjoined = self.dfjoined.merge(df_diff_bylevel[ikey], left_on=cfg_exact_left_on+[keyleft], right_on=cfg_exact_left_on+['__top1left__'], suffixes=['',keyleft])
             cfg_col_rename = ['__top1left__','__top1right__','__top1diff__','__matchtype__']

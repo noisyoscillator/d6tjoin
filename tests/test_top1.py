@@ -4,6 +4,7 @@ pd.set_option('display.expand_frame_repr', False)
 import importlib
 import d6tjoin.top1
 import jellyfish
+from faker import Faker
 
 import tests.test_smartjoin
 
@@ -97,4 +98,63 @@ def test_top1_multi():
 
     assert True
 
-test_top1_multi()
+
+def test_top1_examples():
+    import uuid
+    import itertools
+
+    # ******************************************
+    # generate sample data
+    # ******************************************
+    nobs = 10
+    # todo: set uuid seed
+    # todo: only pick first 2 blocks
+    f1 = Faker()
+    f1.seed(0)
+    uuid1 = [str(f1.uuid4()).split('-')[0] for _ in range(nobs)]
+    dates1 = pd.date_range('1/1/2010', '1/1/2011')
+    dates2 = pd.bdate_range('1/1/2010', '1/1/2011')  # business instead of calendar dates
+
+    df1 = pd.DataFrame(list(itertools.product(uuid1, dates1)), columns=['id', 'date'])
+    df1['v'] = np.random.sample(df1.shape[0])
+    df2 = df1.copy()
+    df2['id'] = df1['id'].str[1:-1]
+
+    # r = d6tjoin.top1.MergeTop1Number(df1, df2, 'id', 'id', ['date'], ['date']).merge()
+    # assert raises ValueError => should check it's a number to do number join
+
+    # r = d6tjoin.top1.MergeTop1Diff(df1, df2, 'id', 'id', jellyfish.levenshtein_distance, ['date'], ['date']).merge()
+    # assert min()==2
+    # assert diff no duplicates
+    # assert diff found == substring
+    # assert only 100 candidates (not 366*100)
+
+    # r = d6tjoin.top1.MergeTop1(df1, df2, ['id'], ['id'], ['date'], ['date']).merge()
+    # assert merged==merged
+    # assert diff==diff
+
+    # dates2 = pd.bdate_range('1/1/2010', '1/1/2011')  # business instead of calendar dates
+    # df2 = pd.DataFrame(list(itertools.product(uuid1, dates2)), columns=['id', 'date'])
+    # df2['v'] = np.random.sample(df2.shape[0])
+    # r = d6tjoin.top1.MergeTop1(df1, df2, ['date'], ['date'], ['id'], ['id']).merge()
+    # # why cause error?
+    # r = d6tjoin.top1.MergeTop1(df1.head(), df2, ['date'], ['date'], ['id'], ['id']).merge()
+
+    df2 = pd.DataFrame(list(itertools.product(uuid1, dates2)), columns=['id', 'date'])
+    df2['v'] = np.random.sample(df2.shape[0])
+    df2['id'] = df1['id'].str[1:-1]
+
+    result = d6tjoin.top1.MergeTop1(df1, df2, ['date', 'id'], ['date', 'id']).merge()
+    result['merged']
+    # o=d6tjoin.top1.MergeTop1(df1, df2, ['date', 'id'], ['date', 'id'])
+    # o.cfg_exact_left_on
+    result = d6tjoin.top1.MergeTop1(df1, df2, ['date', 'id'], ['date', 'id']).merge()
+
+    d6tjoin.utils.PreJoin([df1, df2], ['id', 'date']).stats_prejoin(print_only=False)
+
+    assert True
+
+
+
+
+test_top1_examples()

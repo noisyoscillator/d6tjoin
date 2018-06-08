@@ -6,28 +6,28 @@ Easily join different datasets without writing custom code. Does fuzzy and time-
 
 ```python
 
-import d6tjoin.smart_join
-
->>> sj = d6tjoin.utils.PreJoin([df1, df2], [['BARRA_PIT_CUSIP','cusip'],['date','Date']])
+import d6tjoin.top1
+import d6tjoin.utils
 
 # check join quality
->>> sj.stats_prejoin()
+>>> d6tjoin.utils.PreJoin([df1,df2],['id','date']).stats_prejoin()
+  key left key right  all matched  inner  left  right  outer  unmatched total  unmatched left  unmatched right
+0       id        id        False      0    10     10     20               20              10               10
+1     date      date         True    366   366    366    366                0               0                0
+2  __all__   __all__        False      0  3660   3660   7320             7320            3660             3660
 
-          key left key right  all matched  inner  left  right  outer  unmatched total  unmatched left  unmatched right
-0  BARRA_PIT_CUSIP     cusip        False      0   628  12692  13320            13320             628            12692
-1             date      Date        False      1     2      2      3                2               1                1
-2          __all__   __all__        False      0  1252  22975  24227            24227            1252            22975
-
->>> sj = d6tjoin.utils.FuzzyJoinTop1([df1, df2],fuzzy_keys= [['BARRA_PIT_CUSIP','cusip'],['date','Date']])
-
->>> df_merge_top1 = sj.run_match_top1('BARRA_PIT_CUSIP')
->>> df_merge_top1['table'].head()
-      __top1left__ __top1right__  __top1diff__ __match type__
-60731  b'19416210'     194162103             3      top1 left
-36934  b'20588710'     205887102             3      top1 left
-20183  b'27864210'     278642103             3      top1 left
-38268  b'54042410'     540424108             3      top1 left
-4732   b'H1467J10'     H1467J104             3      top1 left
+# check find closest match for id
+>>> result = d6tjoin.top1.MergeTop1(df1.head(),df2,fuzzy_left_on=['id'],fuzzy_right_on=['id'],exact_left_on=['date'],exact_right_on=['date']).merge()
+>>>
+>>> print(result['top1']['id'].head(2))
+         date __top1left__ __top1right__  __top1diff__ __matchtype__
+10 2010-01-01     e3e70682        3e7068             2     top1 left
+34 2010-01-01     e443df78        443df7             2     top1 left
+>>>
+>>> print(result['merged'].head(2))
+        date        id   val1 id_right  val1_right   val2
+0 2010-01-01  e3e70682  0.020   3e7068       0.020  0.034
+1 2010-01-01  f728b4fa  0.806   728b4f       0.806  0.849
 
 ```
 
@@ -47,6 +47,6 @@ Update `pip install --upgrade git+https://github.com/d6t/d6tjoin.git`
 
 ## Documentation
 
-*  [SmartJoin Examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-smartjoin.ipynb) - Demonstrates SmartJoin usage
+*  [Top1 similarity join examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-top1.ipynb) - Demonstrates SmartJoin usage
 *  [Official docs](http://d6tjoin.readthedocs.io/en/latest/index.html) - Detailed documentation for modules, classes, functions
 *  [www.databolt.tech](https://www.databolt.tech/index-combine.html) - Web app if you don't want to code
