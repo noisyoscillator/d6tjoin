@@ -37,8 +37,6 @@ Enhances `pd.merge()` function with:
 * Fuzzy top1 similarity joins for strings, dates and numbers
 	* Quickly join stock identifiers, addresses, names without manual processing
 
-[SmartJoin Examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-smartjoin.ipynb)
-
 ## Installation
 
 Install `pip install git+https://github.com/d6t/d6tjoin.git`
@@ -47,6 +45,6 @@ Update `pip install --upgrade git+https://github.com/d6t/d6tjoin.git`
 
 ## Documentation
 
-*  [Top1 similarity join examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-top1.ipynb) - Demonstrates SmartJoin usage
+*  [Diagnosing join problems notebook](https://github.com/d6t/d6tjoin/blob/master/examples-prejoin.ipynb)
+*  [Top1 similarity join examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-top1.ipynb)
 *  [Official docs](http://d6tjoin.readthedocs.io/en/latest/index.html) - Detailed documentation for modules, classes, functions
-*  [www.databolt.tech](https://www.databolt.tech/index-combine.html) - Web app if you don't want to code
