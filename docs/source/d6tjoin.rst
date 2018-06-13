@@ -4,10 +4,10 @@ d6tjoin package
 Submodules
 ----------
 
-d6tjoin\.smart\_join module
----------------------------
+d6tjoin\.top1 module
+--------------------
 
-.. automodule:: d6tjoin.smart_join
+.. automodule:: d6tjoin.top1
     :members:
     :undoc-members:
     :show-inheritance:

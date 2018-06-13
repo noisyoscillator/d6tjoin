@@ -63,4 +63,4 @@ Update `pip install --upgrade git+https://github.com/d6t/d6tjoin.git`
 
 *  [PreJoin examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-prejoin.ipynb) - Examples for diagnosing join problems
 *  [MergeTop1 notebook](https://github.com/d6t/d6tjoin/blob/master/examples-top1.ipynb) - Best match join examples notebook
-*  [Official docs](http://d6tjoin.readthedocs.io/en/latest/index.html) - Detailed documentation for modules, classes, functions
+*  [Official docs](http://d6tjoin.readthedocs.io/en/latest/py-modindex.html) - Detailed documentation for modules, classes, functions

@@ -8,13 +8,13 @@ import jellyfish
 # ******************************************
 # helpers
 # ******************************************
-def set_values(dfg, key):
+def _set_values(dfg, key):
     v = dfg[key].unique()
     v = v[~pd.isnull(v)]
     return set(v)
 
 
-def filter_group_min(dfg, col):
+def _filter_group_min(dfg, col):
     """
 
     Returns all rows equal to min in col
@@ -23,33 +23,13 @@ def filter_group_min(dfg, col):
     return dfg[dfg[col] == dfg[col].min()]
 
 class MergeTop1Diff(object):
+    """
+
+    Top1 minimum difference join. Mostly used for strings. Helper for `MergeTop1`.
+
+    """
 
     def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, fun_diff, exact_left_on=None, exact_right_on=None, top_limit=None, is_keep_debug=False):
-        """
-
-        Left top 1 similarity join on a single key. It applies a difference function to find the key pair with the smallest difference.
-
-        Args:
-            df1 (dataframe): left dataframe onto which the right dataframe is joined
-            df2 (dataframe): right dataframe
-            fuzzy_keys (list): list of join keys for fuzzy joins. See notes for details
-            exact_how (str): exact join mode same as `pd.merge(how='inner')`
-            fuzzy_how (dict): specify fuzzy join options by merge level eg {0:{'top_limit':1}}
-            keys_bydf (bool): if keys list is by dataframe (default) or join level. See notes for details
-
-        Note:
-            * specifying join keys:
-                * if both dataframes have matching columns: `fuzzy_keys=['key1','key2']`
-                * else: `fuzzy_keys=[['key1df1','key1df2'],['key2df1','key2df2']]`
-                    * by default you provide keys by join level eg `[['key1df1','key1df2'],['key2df1','key2df2']]` instead you can also provide keys by dataframe `[['key1df1','key2df1'],['key1df2','key2df2']], keys_bydf=True`
-            * fuzzy_how: controls join options by join level
-                * dict keys are join level eg with `fuzzy_keys=[['key1df1','key1df2'],['key2df1','key2df2']]` you set `fuzzy_how={0:{'top_nrecords':5},0:{'top_nrecords':5}}`
-                * options are:
-                    * fun_diff: difference function or list of difference functions applied sequentially. Needs to be 0=similar and >0 dissimilar
-                    * top_limit: maximum difference, keep only canidates with difference <= top_limit
-                    * top_nrecords: keep only n top_nrecords, good for generating previews
-
-        """
 
         # check exact keys
         if not exact_left_on:
@@ -83,8 +63,8 @@ class MergeTop1Diff(object):
         self.cfg_is_keep_debug = is_keep_debug
 
     def _allpairs_candidates(self):
-        values_left = set_values(self.dfs[0], self.cfg_fuzzy_left_on)
-        values_right = set_values(self.dfs[1], self.cfg_fuzzy_right_on)
+        values_left = _set_values(self.dfs[0], self.cfg_fuzzy_left_on)
+        values_right = _set_values(self.dfs[1], self.cfg_fuzzy_right_on)
 
         values_left_exact = values_left.intersection(values_right)
         values_left_fuzzy = values_left.difference(values_right)
@@ -102,14 +82,6 @@ class MergeTop1Diff(object):
         return df_candidates
 
     def _top1_diff_noblock(self):
-        """
-
-        Merges two dataframes with fuzzy top1 similarity
-
-        Args:
-            fuzzy* (str): single top1 similarity key
-
-        """
         df_candidates = self._allpairs_candidates()
 
         idxSel = df_candidates['__matchtype__'] != 'exact'
@@ -117,7 +89,7 @@ class MergeTop1Diff(object):
         df_candidates.loc[~idxSel, '__top1diff__'] = 0
         has_duplicates = False
 
-        df_diff = df_candidates.groupby('__top1left__',group_keys=False).apply(lambda x: filter_group_min(x,'__top1diff__'))
+        df_diff = df_candidates.groupby('__top1left__',group_keys=False).apply(lambda x: _filter_group_min(x,'__top1diff__'))
         if self.cfg_top_limit:
             df_diff = df_diff[df_diff['__top1diff__']<=self.cfg_top_limit]
         has_duplicates = df_diff.groupby('__top1left__').size().max()>1
@@ -128,14 +100,6 @@ class MergeTop1Diff(object):
 
 
     def _merge_top1_diff_noblock(self):
-        """
-
-        Merges two dataframes with fuzzy top1 similarity
-
-        Args:
-            fuzzy* (str): single top1 similarity key
-
-        """
         df_diff, has_duplicates = self._top1_diff_noblock()
         dfjoin = self.dfs[0].merge(df_diff, left_on=self.cfg_fuzzy_left_on, right_on='__top1left__')
         dfjoin = dfjoin.merge(self.dfs[1], left_on='__top1right__', right_on=self.cfg_fuzzy_right_on, suffixes=['','__right__'])
@@ -196,15 +160,6 @@ class MergeTop1Diff(object):
 
 
     def _merge_top1_diff_withblock(self):
-        """
-
-        Merges two dataframes with fuzzy top1 similarity. Includes exact keys blocking index
-
-        Args:
-            fuzzy* (str): single top1 similarity key
-            exact* (list): list of exact join keys, acting as blocking index
-
-        """
 
         df_diff, has_duplicates = self._top1_diff_withblock()
 
@@ -224,14 +179,7 @@ class MergeTop1Diff(object):
             return self._top1_diff_noblock()
 
     def merge(self):
-        """
 
-        Merges two dataframes with fuzzy top1 similarity
-
-        Args:
-            fuzzy* (str): single top1 similarity key
-
-        """
         if not self.cfg_exact_left_on and not self.cfg_exact_right_on:
             return self._merge_top1_diff_noblock()
         elif self.cfg_exact_left_on and self.cfg_exact_right_on:
@@ -241,7 +189,12 @@ class MergeTop1Diff(object):
 
 
 class MergeTop1Number(object):
-    
+    """
+
+    Top1 minimum difference join for numbers. Helper for `MergeTop1`.
+
+    """
+
     def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, exact_left_on=None, exact_right_on=None, direction='nearest', top_limit=None, is_keep_debug=False):
 
         # check exact keys
@@ -303,8 +256,8 @@ class MergeTop1Number(object):
 
     def _top1_diff_noblock(self):
             # uniques
-            values_left = set_values(self.dfs[0], self.cfg_fuzzy_left_on)
-            values_right = set_values(self.dfs[1], self.cfg_fuzzy_right_on)
+            values_left = _set_values(self.dfs[0], self.cfg_fuzzy_left_on)
+            values_right = _set_values(self.dfs[1], self.cfg_fuzzy_right_on)
 
             # sort
             df_keys_left = pd.DataFrame({'__top1left__':list(values_left)}).sort_values('__top1left__')
@@ -336,11 +289,38 @@ class MergeTop1Number(object):
         return {'merged': dfjoin, 'top1': df_diff, 'duplicates': None}
 
 class MergeTop1(object):
+    """
+
+    Left best match join. It applies a difference function to find the key pair with the smallest difference to the join key.
+
+    Args:
+        df1 (dataframe): left dataframe onto which the right dataframe is joined
+        df2 (dataframe): right dataframe
+        fuzzy_left_on (list): join keys for similarity match, left dataframe
+        fuzzy_right_on (list): join keys for similarity match, right dataframe
+        exact_left_on (list, default None): join keys for exact match, left dataframe
+        exact_right_on (list, default None): join keys for exact match, right dataframe
+        fun_diff (list, default None): list of difference functions to be applied for each fuzzy key
+        top_limit (list, default None): list of values to cap similarity matches
+        is_keep_debug (bool): keep diagnostics columns, good for debugging
+
+    Note:
+        * fun_diff: applies the difference function to find the best match with minimum distance
+            * By default gets automatically determined depending on whether you have a string or date/number
+            * Use `None` to keep the default, so example [None, lambda x, y: x-y]
+            * Functions within list get applied in order same order to fuzzy join keys
+            * Needs to be a difference function so lower is better. For functions like Jaccard higher is better so you need to adjust for that
+        * top_limit: Limits the number of matches to anything below that values. For example if two strings differ by 3 but top_limit is 2, that match will be ignored
+            * for dates you can use [todo]
+
+    """
 
     def __init__(self, df1, df2, fuzzy_left_on=None, fuzzy_right_on=None, exact_left_on=None, exact_right_on=None, fun_diff = None, top_limit=None, is_keep_debug=False):
 
-        # todo: pass custom fundiff
+
+        # todo: pass custom merge asof param
         # todo: pass list of fundiff
+
 
         # check fuzzy keys
         if not fuzzy_left_on or not fuzzy_right_on:
@@ -374,6 +354,8 @@ class MergeTop1(object):
             top_limit = [None,]*self.cfg_njoins_fuzzy
         if not fun_diff:
             fun_diff = [None,]*self.cfg_njoins_fuzzy
+        elif len(fun_diff)!=len(fuzzy_left_on):
+            raise ValueError('fun_diff needs to the same length as fuzzy_left_on. Use None in list to use default')
         if not isinstance(top_limit, (list,)) or not len(top_limit)==self.cfg_njoins_fuzzy:
             raise NotImplementedError('top_limit needs to a list with entries for each fuzzy join key')
         if not isinstance(fun_diff, (list,)) or not len(top_limit)==self.cfg_njoins_fuzzy:
@@ -393,6 +375,14 @@ class MergeTop1(object):
         self.cfg_is_keep_debug = is_keep_debug
 
     def merge(self):
+        """
+
+        Executes merge
+
+        Returns:
+             dict: keys 'merged' has merged dataframe, 'top1' has best matches by fuzzy_left_on. See example notebooks for details
+
+        """
         df_diff_bylevel = OrderedDict()
 
         self.dfjoined = self.dfs[0].copy()

@@ -8,7 +8,7 @@ import numpy as np
 # df_str_summary
 # ******************************************
 
-def apply_strlen(dfg, unique_count=False):
+def _apply_strlen(dfg, unique_count=False):
     lenv = np.vectorize(len)
     alens = lenv(dfg.values)
     r = {'median':np.median(alens),'mean':np.mean(alens),'min':np.min(alens),'max':np.max(alens),'total':dfg.shape[0]}
@@ -26,7 +26,7 @@ def df_str_summary(dfg, columns=None, unique_count=False):
         unique_count (:obj:`bool`, optional): include count of unique values
 
     Returns:
-        dataframe:
+        dataframe: string length statistics
     """
     if not columns:
         columns=dfg.columns
@@ -34,7 +34,7 @@ def df_str_summary(dfg, columns=None, unique_count=False):
         cfg_col_sel = ['mean','median','min','max','total','uniques']
     else:
         cfg_col_sel = ['mean','median','min','max','total']
-    return dfg[columns].select_dtypes(include=['object']).apply(lambda x: apply_strlen(x, unique_count)).T[cfg_col_sel]
+    return dfg[columns].select_dtypes(include=['object']).apply(lambda x: _apply_strlen(x, unique_count)).T[cfg_col_sel]
 
 
 # ******************************************
