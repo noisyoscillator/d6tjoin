@@ -9,11 +9,11 @@ Easily join different datasets without writing custom code. Does best match join
 import d6tjoin.top1
 import d6tjoin.utils
 
-# check join quality => none of the ids match
-
 #************************
 # pre join diagnostics
 #************************
+
+# check join quality => none of the ids match
 
 d6tjoin.utils.PreJoin([df1,df2],['id','date']).stats_prejoin()
 
