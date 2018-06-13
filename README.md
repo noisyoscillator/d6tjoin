@@ -1,6 +1,6 @@
 # Databolt Smart Join
 
-Easily join different datasets without writing custom code. Does best match joins on strings, dates and numbers. For example you can quickly join similar but not identical stock tickers, addresses, names without manual processing.
+Easily join different datasets without writing custom code. Does best match joins on strings, dates and numbers. For example you can quickly join similar but not identical stock tickers, addresses, names and dates without manual processing.
 
 ## Sample Use
 
