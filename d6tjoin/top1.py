@@ -311,7 +311,7 @@ class MergeTop1(object):
             * Functions within list get applied in order same order to fuzzy join keys
             * Needs to be a difference function so lower is better. For functions like Jaccard higher is better so you need to adjust for that
         * top_limit: Limits the number of matches to anything below that values. For example if two strings differ by 3 but top_limit is 2, that match will be ignored
-            * for dates you can use [todo]
+            * for dates you can use `pd.offsets.Day(1)` or similar
 
     """
 
