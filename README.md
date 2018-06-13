@@ -4,7 +4,7 @@ Easily join different datasets without writing custom code. Does best match join
 
 ## Sample Use
 
-```python
+```
 
 import d6tjoin.top1
 import d6tjoin.utils
