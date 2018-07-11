@@ -151,7 +151,7 @@ class MergeTop1Diff(object):
 
         df_diff = df_diff.append(df_keys_left_exact)
         df_diff['__top1diff__']=df_diff['__top1diff__'].fillna(0) # exact keys
-        df_diff = df_diff.groupby(self.cfg_exact_left_on+['__top1left__'],group_keys=False).apply(lambda x: filter_group_min(x,'__top1diff__'))
+        df_diff = df_diff.groupby(self.cfg_exact_left_on+['__top1left__'],group_keys=False).apply(lambda x: _filter_group_min(x,'__top1diff__'))
         if self.cfg_top_limit:
             df_diff = df_diff[df_diff['__top1diff__']<=self.cfg_top_limit]
         has_duplicates = df_diff.groupby(self.cfg_exact_left_on+['__top1left__']).size().max()>1
