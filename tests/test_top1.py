@@ -155,6 +155,29 @@ def test_top1_examples():
     assert True
 
 
+def test_set():
 
+    import pandas as pd
+    import numpy as np
+    import importlib
+    import d6tjoin.top1
 
-test_top1_examples()
+    import ciseau
+    import scipy.spatial.distance
+
+    df_db = pd.read_csv('~/database.csv',index_col=0)
+
+    def diff_jaccard(a, b):
+        # pad with empty str to make euqal length
+        a = np.pad(a, (0, max(0, len(b) - len(a))), 'constant', constant_values=(0, 0))
+        b = np.pad(b, (0, max(0, len(a) - len(b))), 'constant', constant_values=(0, 0))
+        return scipy.spatial.distance.jaccard(a, b)
+
+    def strsplit(t):
+        return [s for s in [s.replace(" ", "") for s in ciseau.tokenize(t)] if s not in ['.', ',', '-', ';', '(', ')']]
+
+    importlib.reload(d6tjoin.top1)
+    j = d6tjoin.top1.MergeTop1Diff(df_db.head(),df_db,'description','description',fun_diff=diff_jaccard,topn=2,fun_preapply=strsplit,fun_postapply=lambda x: ' '.join(x))
+    j.merge()['merged']
+
+test_set()
