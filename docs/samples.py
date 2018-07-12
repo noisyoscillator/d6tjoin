@@ -7,6 +7,8 @@ import importlib
 import d6tjoin.top1
 import d6tjoin.utils
 
+importlib.reload(d6tjoin.top1)
+
 # *******************************************************
 # generate sample time series data with id and value
 # *******************************************************

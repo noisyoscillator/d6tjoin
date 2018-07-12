@@ -29,13 +29,13 @@ def test_top1_gen_candidates():
 
     def helper(df1, df2):
 
-        dfr = d6tjoin.top1.MergeTop1Diff(df1, df2,'id','id')._allpairs_candidates()
+        dfr = d6tjoin.top1.MergeTop1Diff(df1, df2,'id','id',jellyfish.levenshtein_distance)._allpairs_candidates()
         assert dfr.shape==(4, 3)
-        assert (dfr['__top1left__']==df1.values[0]).sum()==1
-        assert (dfr['__top1left__']==df1.values[1]).sum()==3
-        assert (dfr['__top1right__']==df1.values[0]).sum()==2
-        assert (dfr['__top1right__']==df2.values[1]).sum()==1
-        assert (dfr['__top1right__']==df2.values[2]).sum()==1
+        assert (dfr['__top1left__'].values[0]==df1['id'].values[0])
+        assert np.all(dfr['__top1left__'].values[1:]==df1['id'].values[1])
+        assert (dfr['__top1right__'].values[0]==df1['id'].values[0])
+        assert (dfr['__top1right__']==df2['id'].values[1]).sum()==1
+        assert (dfr['__top1right__']==df2['id'].values[2]).sum()==1
         assert (dfr['__matchtype__']=='exact').sum()==1
         assert (dfr['__matchtype__']=='top1 left').sum()==3
 
@@ -72,10 +72,10 @@ def test_top1_str():
 def test_top1_num():
 
     df1, df2 = tests.test_smartjoin.gen_multikey_complex(unmatched_date=True)
-    r = d6tjoin.top1.MergeTop1Number(df1, df2,'date','date').merge()
+    r = d6tjoin.top1.MergeTop1Number(df1, df2,'date','date',is_keep_debug=True).merge()
     dfr = r['top1']
     assert dfr.shape==(4, 4)
-    assert np.all(dfr.groupby('__match type__').size().values==np.array([2, 2]))
+    assert np.all(dfr.groupby('__matchtype__').size().values==np.array([2, 2]))
     assert dfr['__top1diff__'].dt.days.max()==2
     assert dfr['__top1diff__'].dt.days.min()==0
 
@@ -155,6 +155,72 @@ def test_top1_examples():
     assert True
 
 
+def fiddle_set():
+
+    import pandas as pd
+    import numpy as np
+    import importlib
+    import d6tjoin.top1
+
+    import ciseau
+    import scipy.spatial.distance
+
+    df_db = pd.read_csv('~/database.csv',index_col=0)
+
+    def diff_jaccard(a, b):
+        # pad with empty str to make euqal length
+        a = np.pad(a, (0, max(0, len(b) - len(a))), 'constant', constant_values=(0, 0))
+        b = np.pad(b, (0, max(0, len(a) - len(b))), 'constant', constant_values=(0, 0))
+        return scipy.spatial.distance.jaccard(a, b)
+
+    def strsplit(t):
+        return [s for s in [s.replace(" ", "") for s in ciseau.tokenize(t)] if s not in ['.', ',', '-', ';', '(', ')']]
+
+    importlib.reload(d6tjoin.top1)
+    j = d6tjoin.top1.MergeTop1Diff(df_db.head(),df_db,'description','description',fun_diff=diff_jaccard,topn=2,fun_preapply=strsplit,fun_postapply=lambda x: ' '.join(x))
+    j.merge()['merged']
 
 
-test_top1_examples()
+def test_multicore():
+    nobs = 10
+    f1 = Faker()
+    f1.seed(0)
+    uuid1 = [str(f1.uuid4()).split('-')[0] for _ in range(nobs)]
+
+    df1 = pd.DataFrame(uuid1, columns=['id'])
+    df1['val1'] = np.round(np.random.sample(df1.shape[0]), 3)
+
+    # create mismatch
+    df2 = df1.copy()
+    df2['id'] = df1['id'].str[1:-1]
+    df2['val2'] = np.round(np.random.sample(df2.shape[0]), 3)
+
+
+    m = d6tjoin.top1.MergeTop1Diff(df1,df2,'id','id',fun_diff=jellyfish.levenshtein_distance)
+    df_candidates = m._allpairs_candidates()
+
+    idxSel = df_candidates['__matchtype__'] != 'exact'
+    dfd2 = df_candidates.copy()
+    dfd2.loc[idxSel,'__top1diff__'] = d6tjoin.top1._applyFunMulticore(df_candidates.loc[idxSel,'__top1left__'].values, df_candidates.loc[idxSel,'__top1right__'].values,jellyfish.levenshtein_distance)
+
+    dfd1 = df_candidates.copy()
+    dfd1.loc[idxSel, '__top1diff__'] = df_candidates[idxSel].apply(lambda x: jellyfish.levenshtein_distance(x['__top1left__'], x['__top1right__']), axis=1)
+    assert dfd2.equals(dfd1)
+
+    assert True
+
+    '''
+    multicore in caller class
+    pass multicore on
+    make ifelse multicore for every apply diff
+    
+    default yes?
+    part of requirements
+    
+    update setup.py requirements
+    
+    
+    '''
+
+
+test_top1_gen_candidates()
