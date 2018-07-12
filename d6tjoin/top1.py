@@ -4,6 +4,8 @@ from collections import OrderedDict
 import itertools
 import warnings
 import jellyfish
+from joblib import Parallel, delayed
+import multiprocessing
 
 # ******************************************
 # helpers
@@ -25,6 +27,12 @@ def _filter_group_min(dfg, col, topn=1):
     else:
         return dfg[dfg[col].isin(np.sort(dfg[col].unique())[:topn])]
 
+
+def _applyFunMulticore(values1, values2, func):
+
+    retLst = Parallel(n_jobs=multiprocessing.cpu_count())(delayed(func)(p[0],p[1]) for p in zip(values1,values2))
+    return retLst
+
 class MergeTop1Diff(object):
     """
 
@@ -32,7 +40,8 @@ class MergeTop1Diff(object):
 
     """
 
-    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, fun_diff=None, exact_left_on=None, exact_right_on=None, top_limit=None, topn=1, fun_preapply = None, fun_postapply = None, is_keep_debug=False):
+    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, fun_diff=None, exact_left_on=None, exact_right_on=None,
+                 top_limit=None, topn=1, fun_preapply = None, fun_postapply = None, is_keep_debug=False, use_multicore=True):
 
         # check exact keys
         if not exact_left_on:
@@ -51,7 +60,7 @@ class MergeTop1Diff(object):
         if not callable(fun_diff):
             raise ValueError('fun_diff needs to a function')
 
-        if not callable(fun_preapply) or not callable(fun_postapply):
+        if (fun_preapply and fun_postapply) and (not callable(fun_preapply) or not callable(fun_postapply)):
             raise ValueError('fun_preapply and fun_postapply needs to a function')
 
         # use blocking index?
@@ -76,6 +85,7 @@ class MergeTop1Diff(object):
         self.cfg_top_limit = top_limit
         self.cfg_is_keep_debug = is_keep_debug
         self.cfg_topn = topn
+        self.cfg_use_multicore = use_multicore
 
     def _allpairs_candidates(self):
         values_left = _set_values(self.dfs[0], self.cfg_fuzzy_left_on)
@@ -109,7 +119,11 @@ class MergeTop1Diff(object):
         df_candidates = self._allpairs_candidates()
 
         idxSel = df_candidates['__matchtype__'] != 'exact'
-        df_candidates.loc[idxSel,'__top1diff__'] = df_candidates[idxSel].apply(lambda x: self.cfg_fun_diff(x['__top1left__'], x['__top1right__']), axis=1)
+        if self.cfg_use_multicore:
+            df_candidates.loc[idxSel, '__top1diff__'] = _applyFunMulticore(df_candidates.loc[idxSel,'__top1left__'].values, df_candidates.loc[idxSel,'__top1right__'].values,self.cfg_fun_diff)
+        else:
+            df_candidates.loc[idxSel,'__top1diff__'] = df_candidates[idxSel].apply(lambda x: self.cfg_fun_diff(x['__top1left__'], x['__top1right__']), axis=1)
+
         df_candidates.loc[~idxSel, '__top1diff__'] = 0
         has_duplicates = False
 
@@ -171,7 +185,10 @@ class MergeTop1Diff(object):
         df_keysets_groups = df_keysets_groups.dropna()
 
         df_candidates = df_keysets_groups[['__top1left__', '__top1right__']].drop_duplicates()
-        df_candidates['__top1diff__'] = df_candidates.apply(lambda x: self.cfg_fun_diff(x['__top1left__'], x['__top1right__']), axis=1)
+        if self.cfg_use_multicore:
+            df_candidates['__top1diff__'] = _applyFunMulticore(df_candidates['__top1left__'].values, df_candidates['__top1right__'].values, self.cfg_fun_diff)
+        else:
+            df_candidates['__top1diff__'] = df_candidates.apply(lambda x: self.cfg_fun_diff(x['__top1left__'], x['__top1right__']), axis=1)
         df_candidates['__matchtype__'] = 'top1 left'
 
         # calculate difference
@@ -223,7 +240,8 @@ class MergeTop1Number(object):
 
     """
 
-    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, exact_left_on=None, exact_right_on=None, direction='nearest', top_limit=None, is_keep_debug=False):
+    def __init__(self, df1, df2, fuzzy_left_on, fuzzy_right_on, exact_left_on=None, exact_right_on=None,
+                 direction='nearest', top_limit=None, is_keep_debug=False):
 
         # check exact keys
         if not exact_left_on:
@@ -343,7 +361,8 @@ class MergeTop1(object):
 
     """
 
-    def __init__(self, df1, df2, fuzzy_left_on=None, fuzzy_right_on=None, exact_left_on=None, exact_right_on=None, fun_diff = None, top_limit=None, is_keep_debug=False):
+    def __init__(self, df1, df2, fuzzy_left_on=None, fuzzy_right_on=None, exact_left_on=None, exact_right_on=None,
+                 fun_diff = None, top_limit=None, is_keep_debug=False, use_multicore=True):
 
 
         # todo: pass custom merge asof param
@@ -401,6 +420,7 @@ class MergeTop1(object):
         self.cfg_top_limit = top_limit
         self.cfg_fun_diff = fun_diff
         self.cfg_is_keep_debug = is_keep_debug
+        self.cfg_use_multicore = use_multicore
 
     def merge(self):
         """
@@ -424,12 +444,12 @@ class MergeTop1(object):
             typeleft = self.dfs[0][keyleft].dtype
 
             if self.cfg_fun_diff[ilevel]:
-                df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, self.cfg_fun_diff[ilevel], cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel]).top1_diff()[0]
+                df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, self.cfg_fun_diff[ilevel], cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel], use_multicore=self.cfg_use_multicore).top1_diff()[0]
             else:
                 if typeleft == 'int64' or typeleft == 'float64' or typeleft == 'datetime64[ns]':
                     df_diff_bylevel[ikey] = MergeTop1Number(self.dfjoined, self.dfs[1], keyleft, keyright, cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel]).top1_diff()
                 elif typeleft == 'object' and type(self.dfs[0][keyleft].values[0])==str:
-                    df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, jellyfish.levenshtein_distance, cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel]).top1_diff()[0]
+                    df_diff_bylevel[ikey] = MergeTop1Diff(self.dfjoined, self.dfs[1], keyleft, keyright, jellyfish.levenshtein_distance, cfg_exact_left_on, cfg_exact_right_on, top_limit=self.cfg_top_limit[ilevel], use_multicore=self.cfg_use_multicore).top1_diff()[0]
                     # todo: handle duplicates
                 else:
                     raise ValueError('Unrecognized data type for top match, need to pass fun_diff in arguments')
