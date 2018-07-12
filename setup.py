@@ -15,7 +15,8 @@ setup(
     install_requires=[
         'numpy',
         'pandas',
-        'jellyfish'
+        'jellyfish',
+        'joblib'
     ],
     include_package_data=True,
     python_requires='>=3.6'

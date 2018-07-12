@@ -59,6 +59,8 @@ Install `pip install git+https://github.com/d6t/d6tjoin.git`
 
 Update `pip install --upgrade git+https://github.com/d6t/d6tjoin.git`
 
+NB: For the `jellyfish` library, make sure the C implementation is working else `d6tjoin` will be very slow. You can test by running `import jellyfish.cjellyfish` if the C version is installed. If you don't have a C compiler, you can `conda install -c conda-forge jellyfish`.
+
 ## Documentation
 
 *  [PreJoin examples notebook](https://github.com/d6t/d6tjoin/blob/master/examples-prejoin.ipynb) - Examples for diagnosing join problems
